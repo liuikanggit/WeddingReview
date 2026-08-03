@@ -26,7 +26,13 @@ if [ -n "$TARGET_ARGS" ]; then
 fi
 
 echo "正在打包 macOS $LABEL …"
-pnpm tauri build $TARGET_ARGS
+
+# CI=true 是必须的，不是摆设：
+# Tauri 打 DMG 时会用 AppleScript 让 Finder 摆好窗口布局，而这需要
+# 「自动化 → 控制 Finder」权限。终端没被授权时那一步会直接失败，
+# 报错还只有一句 "error running bundle_dmg.sh"，看不出原因。
+# 检测到 CI 环境时 Tauri 会跳过这段美化（--skip-jenkins），DMG 照常生成。
+CI=true pnpm tauri build $TARGET_ARGS
 
 APP="$BUNDLE_DIR/macos/拾光笺.app"
 DMG=$(find "$BUNDLE_DIR/dmg" -name "*.dmg" 2>/dev/null | head -1)

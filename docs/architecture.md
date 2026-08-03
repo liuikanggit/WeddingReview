@@ -89,6 +89,11 @@ ProjectData
 
 ## 踩过的坑（避免重复）
 
+- 本地打 macOS DMG **必须带 `CI=true`**。Tauri 会用 AppleScript 让 Finder 摆放 DMG 窗口布局，
+  这需要「自动化 → 控制 Finder」权限；终端没被授权时那步直接失败，而报错只有一句
+  `error running bundle_dmg.sh`，完全看不出原因。`CI=true` 会让 Tauri 传 `--skip-jenkins`
+  跳过美化，DMG 照常生成。GitHub Actions 里本来就有 `CI=true`，所以只有本地会踩到。
+
 - `printpdf` 的 `images` feature **只引入 image crate 本身**，不启用任何具体格式解码；少了 `jpeg`/`png` 会让 `RawImage::decode_from_bytes` 直接失败，而这条路径不跑导出就不会暴露。
 - WebKit 给 `<button>` 套了匿名内部布局盒，子元素的 `aspect-ratio` 会失效、内容被压扁——卡片类组件别用 button 当容器。
 - `aspect-ratio` 在「flex 子项同时是 grid 容器」这层嵌套里也会被压缩掉，网格行高需要写死。
