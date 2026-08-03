@@ -1,0 +1,34 @@
+[package]
+name = "wedding-review"
+version = "0.1.0"
+description = "婚纱照批注工具"
+authors = ["liukang"]
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+# The `_lib` suffix may seem redundant but it is necessary
+# to make the lib name unique and wouldn't conflict with the bin name.
+# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
+name = "wedding_review_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+image = "0.25.10"
+# 注意：printpdf 的 "images" 只引入 image crate 本身，具体格式解码要单独开，
+# 少了 jpeg/png 会导致 RawImage::decode_from_bytes 直接失败
+printpdf = { version = "0.12.5", features = ["images", "jpeg", "png"] }
+base64 = "0.23.0"
+tauri-plugin-dialog = "2.7.2"
+rayon = "1.12.0"
+env_logger = "0.11.11"
+jiff = { version = "0.2.35", default-features = false, features = ["std"] }
+

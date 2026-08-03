@@ -1,0 +1,81 @@
+<!--
+  拾光笺 应用图标源文件（1024×1024）
+
+  设计意图：直接画出产品的核心动作——在一张婚纱照上圈出要改的地方。
+  · 深墨底呼应编辑器的"看片台"，让照片跳出来；
+  · 照片卡略微倾斜，像随手摊在桌上的样片，卡内用极简形体暗示人像与裙摆；
+  · 赭红手绘圈只圈住人物头部一带，起落笔错开、不闭合，保留手写感；
+    圈画得小而准，才像"批注"，占满整张就成了字母 O。
+  元素克制，缩到 16px 仍能认出"照片 + 红圈"。
+
+  改完这份 SVG 后重新生成全套图标：./scripts/make-icon.sh
+-->
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="plate" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#343941" />
+      <stop offset="55%" stop-color="#22262c" />
+      <stop offset="100%" stop-color="#15171b" />
+    </linearGradient>
+
+    <linearGradient id="photo" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="58%" stop-color="#fbf8f4" />
+      <stop offset="100%" stop-color="#efe8de" />
+    </linearGradient>
+
+    <!-- 裙摆：下沉的暖灰，给白卡一点体积感 -->
+    <linearGradient id="gown" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ded2be" />
+      <stop offset="100%" stop-color="#c9bba3" />
+    </linearGradient>
+
+    <clipPath id="cardClip">
+      <rect x="300" y="236" width="424" height="552" rx="22" />
+    </clipPath>
+
+    <filter id="cardShadow" x="-25%" y="-25%" width="150%" height="150%">
+      <feDropShadow dx="0" dy="18" stdDeviation="26" flood-color="#000" flood-opacity="0.45" />
+    </filter>
+
+    <filter id="inkShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#5c1a12" flood-opacity="0.45" />
+    </filter>
+  </defs>
+
+  <!-- 底板：macOS 图标网格，824×824 居中 -->
+  <rect x="100" y="100" width="824" height="824" rx="186" fill="url(#plate)" />
+  <rect x="101" y="101" width="822" height="822" rx="185" fill="none"
+        stroke="#ffffff" stroke-opacity="0.08" stroke-width="2" />
+
+  <!-- 照片卡 -->
+  <g transform="rotate(-5 512 512)" filter="url(#cardShadow)">
+    <rect x="300" y="236" width="424" height="552" rx="22" fill="url(#photo)" />
+
+    <g clip-path="url(#cardClip)">
+      <!-- 裙摆：一个向下张开的形体，占据画面下半部 -->
+      <path d="M512 470
+               C 566 470, 604 548, 628 648
+               C 648 730, 660 780, 664 812
+               L 360 812
+               C 364 780, 376 730, 396 648
+               C 420 548, 458 470, 512 470 Z"
+            fill="url(#gown)" />
+      <!-- 头部 -->
+      <circle cx="512" cy="404" r="62" fill="#d3c4ab" />
+      <!-- 肩线：把头和裙摆连起来，避免看成两个孤立形状 -->
+      <path d="M470 452 C 486 468, 538 468, 554 452 L 566 484 L 458 484 Z" fill="#d3c4ab" />
+    </g>
+  </g>
+
+  <!-- 批注圈：只圈住头部一带，起落笔错开 -->
+  <g filter="url(#inkShadow)">
+    <path d="M556 316
+             C 470 306, 404 356, 400 424
+             C 396 494, 452 542, 520 544
+             C 590 546, 634 496, 630 428
+             C 626 366, 588 326, 528 320"
+          fill="none" stroke="#c0392b" stroke-width="26"
+          stroke-linecap="round" stroke-linejoin="round" />
+  </g>
+</svg>

@@ -1,0 +1,35 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ── 相册照片一律不入库 ──────────────────────────────
+# images/ 下放的是真人婚纱照，属于私人影像，且单张十几 MB。
+# 开发联调把照片放这里即可，永远不会被提交。
+/images/
+# 批注数据与缩略图/预览图缓存跟着相册文件夹走，同样不入库
+.weddingreview/
+
+# 图标中间产物：由 scripts/make-icon.sh 从 icon-source.svg 现生成，
+# 入库的是 src-tauri/icons/ 下已生成的各平台图标
+/src-tauri/assets/icon-source.png

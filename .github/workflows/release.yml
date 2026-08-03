@@ -1,0 +1,83 @@
+name: 打包发布
+
+# 打 tag（v0.1.0 这种）时自动发版；也可以在 Actions 页面手动触发试跑。
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+jobs:
+  build:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # macOS 打通用包，Intel 和 Apple Silicon 都能装
+          - platform: macos-latest
+            target: universal-apple-darwin
+            label: macOS
+          - platform: windows-latest
+            target: x86_64-pc-windows-msvc
+            label: Windows
+
+    runs-on: ${{ matrix.platform }}
+    name: ${{ matrix.label }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      # Rust 编译是这里最慢的一步，按平台+目标分开缓存
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          key: ${{ matrix.target }}
+
+      - run: pnpm install --frozen-lockfile
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # ── macOS 签名与公证（可选）─────────────────────────
+          # 仓库里配了下面这些 secrets 就走正式签名 + 公证，装完双击即开、零提示；
+          # 没配就沿用 tauri.conf.json 里的 ad-hoc 签名，对方首次打开需要右键。
+          # 两种情况都能出包，不会因为缺 secrets 而失败。
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_KEY_PATH: ${{ secrets.APPLE_API_KEY_PATH }}
+        with:
+          args: --target ${{ matrix.target }}
+          tagName: ${{ github.ref_name }}
+          releaseName: 拾光笺 ${{ github.ref_name }}
+          releaseBody: |
+            按系统选择安装包：
+
+            - **macOS**：`.dmg`（通用包，Intel 与 Apple Silicon 都可用）
+            - **Windows**：`.exe` 安装程序
+
+            > 转发给别人时，macOS 请发 `.dmg` 本身，不要发 `拾光笺.app`——
+            > `.app` 是文件夹，经微信/QQ 转发会损坏，打开会报「已损坏」。
+
+            如果安装包未经 Apple 公证，首次打开时：
+            - macOS：Control + 点击图标 →「打开」，只需一次
+            - Windows：SmartScreen 提示时选「更多信息」→「仍要运行」
+          releaseDraft: true
+          prerelease: false
