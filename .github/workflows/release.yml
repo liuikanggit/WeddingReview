@@ -15,12 +15,17 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # macOS 打通用包，Intel 和 Apple Silicon 都能装
+          # macOS 打通用包，Intel 和 Apple Silicon 都能装。
+          # 注意 universal-apple-darwin 是 Tauri 的伪目标，rustup 里并不存在——
+          # 直接拿它去装工具链会报「component 'rust-std' ... is unavailable」。
+          # 所以 rust_targets 单独列出真正要装的两个架构。
           - platform: macos-latest
             target: universal-apple-darwin
+            rust_targets: aarch64-apple-darwin,x86_64-apple-darwin
             label: macOS
           - platform: windows-latest
             target: x86_64-pc-windows-msvc
+            rust_targets: x86_64-pc-windows-msvc
             label: Windows
 
     runs-on: ${{ matrix.platform }}
@@ -47,7 +52,7 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.target }}
+          targets: ${{ matrix.rust_targets }}
 
       # Rust 编译是这里最慢的一步，按平台+目标分开缓存
       - uses: swatinem/rust-cache@v2
