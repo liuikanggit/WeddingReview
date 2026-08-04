@@ -94,6 +94,22 @@ ProjectData
   `error running bundle_dmg.sh`，完全看不出原因。`CI=true` 会让 Tauri 传 `--skip-jenkins`
   跳过美化，DMG 照常生成。GitHub Actions 里本来就有 `CI=true`，所以只有本地会踩到。
 
+- 签名身份**不要写进 `tauri.conf.json`**。配置里的 `bundle.macOS.signingIdentity` 优先级高于
+  `APPLE_SIGNING_IDENTITY` 环境变量，写死 `"-"` 会让 CI 上配好的正式证书完全失效——
+  包照出，签名却仍是 ad-hoc，一路到公证被拒才暴露。统一走环境变量，本地脚本默认置为 `-`。
+  同理，打包脚本里「没签名就补签 ad-hoc」这类兜底必须区分签名方式，否则会把证书签名抹掉。
+
+- `APPLE_API_KEY_PATH` 是**磁盘路径**而非密钥内容，但 GitHub Secrets 只能存文本；
+  要存 base64 再在 CI 里解码成 `.p8` 文件，把路径写进 `GITHUB_ENV`。
+
+- `secrets` 上下文在**步骤的 `if` 里不可用**，写了会让整个工作流解析失败（HTTP 422，
+  连触发都触发不了）。job 级 `env` 能读 secrets，步骤 `if` 能读 `env`，绕一道即可；
+  只落"配没配"的布尔值，不把密钥摊进 env。
+
+- `universal-apple-darwin` 是 **Tauri 的伪目标，rustup 里并不存在**。交给
+  `rust-toolchain` 装会报 `component 'rust-std' ... is unavailable`；实际要装的是
+  `aarch64-apple-darwin` 和 `x86_64-apple-darwin` 两个。
+
 - `printpdf` 的 `images` feature **只引入 image crate 本身**，不启用任何具体格式解码；少了 `jpeg`/`png` 会让 `RawImage::decode_from_bytes` 直接失败，而这条路径不跑导出就不会暴露。
 - WebKit 给 `<button>` 套了匿名内部布局盒，子元素的 `aspect-ratio` 会失效、内容被压扁——卡片类组件别用 button 当容器。
 - `aspect-ratio` 在「flex 子项同时是 grid 容器」这层嵌套里也会被压缩掉，网格行高需要写死。

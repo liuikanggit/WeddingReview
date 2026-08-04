@@ -8,9 +8,7 @@
 - 导出 PDF 时把所有合成图一次性收集在内存里再交给 Rust，几百张的相册会占用较多内存；更稳的做法是逐张追加写入
 - 未处理 HEIC 在部分系统上的解码兼容性（依赖 `image` crate 的支持程度，需实测）
 - `.weddingreview/thumbnails/` 只增不减，原图删除后缩略图不会清理
-- 未做 Windows 端验证：workflow 配好了，但没在真机上跑过界面
-- macOS 包只有 ad-hoc 签名，没有 Apple 开发者证书签名与公证，对方首次打开要「右键 → 打开」。
-  彻底免掉需要 99 美元/年的开发者账号；届时在 CI 里配 `APPLE_CERTIFICATE` 等 secrets 即可
+- Windows 端只验证了能在 CI 上编译打包，界面和交互没在真机上跑过
 
 ## 已知取舍
 
