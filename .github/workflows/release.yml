@@ -31,6 +31,11 @@ jobs:
     runs-on: ${{ matrix.platform }}
     name: ${{ matrix.label }}
 
+    # 公证是把包交给 Apple 排队处理，正常几分钟，但服务端积压时会一直不返回，
+    # notarytool 就那么挂着。默认 6 小时的 job 超时太长，白烧时间也看不出问题，
+    # 这里收到 90 分钟：超了就失败，至少能立刻看见「是公证卡住了」。
+    timeout-minutes: 90
+
     # secrets 上下文在步骤的 if 里用不了（GitHub 会直接拒绝解析整个工作流），
     # 但 job 级 env 可以读 secrets，步骤的 if 又能读 env——绕一道即可。
     # 这里只落"配没配"的布尔值，不把密钥本身摊到 env 里。
