@@ -26,6 +26,13 @@ jobs:
     runs-on: ${{ matrix.platform }}
     name: ${{ matrix.label }}
 
+    # secrets 上下文在步骤的 if 里用不了（GitHub 会直接拒绝解析整个工作流），
+    # 但 job 级 env 可以读 secrets，步骤的 if 又能读 env——绕一道即可。
+    # 这里只落"配没配"的布尔值，不把密钥本身摊到 env 里。
+    env:
+      HAS_SIGNING: ${{ secrets.APPLE_CERTIFICATE != '' }}
+      HAS_NOTARY_KEY: ${{ secrets.APPLE_API_KEY_P8_BASE64 != '' }}
+
     steps:
       - uses: actions/checkout@v4
 
@@ -54,9 +61,7 @@ jobs:
       # APPLE_API_KEY_PATH 是路径，不是密钥内容本身。
       # Secrets 只能存文本，所以存 base64，用之前还原成 .p8 文件。
       - name: 还原公证 API Key
-        # 注意：这里必须直接判断 secrets，不能判断 env.P8——
-        # 步骤自己的 env 在它自己的 if 里还没生效，条件会恒为假。
-        if: matrix.platform == 'macos-latest' && secrets.APPLE_API_KEY_P8_BASE64 != ''
+        if: matrix.platform == 'macos-latest' && env.HAS_NOTARY_KEY == 'true'
         env:
           P8: ${{ secrets.APPLE_API_KEY_P8_BASE64 }}
         run: |
@@ -116,7 +121,7 @@ jobs:
       # 签名/公证一旦悄悄失效，包照样能出，只是别人打不开——
       # 在 CI 里当场验一遍，不合格就让这次构建红掉。
       - name: 校验签名与公证
-        if: matrix.platform == 'macos-latest' && secrets.APPLE_CERTIFICATE != ''
+        if: matrix.platform == 'macos-latest' && env.HAS_SIGNING == 'true'
         run: |
           APP=$(find src-tauri/target -name "*.app" -maxdepth 5 -type d | head -1)
           echo "检查 $APP"
