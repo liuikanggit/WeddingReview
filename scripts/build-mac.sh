@@ -25,6 +25,19 @@ if [ -n "$TARGET_ARGS" ]; then
   rustup target add aarch64-apple-darwin x86_64-apple-darwin >/dev/null 2>&1 || true
 fi
 
+# 签名身份不写在 tauri.conf.json 里，只走环境变量。
+# 配置文件里写死 "-" 会让 CI 上配好的正式证书失效（配置优先级高于环境变量），
+# 而且失效得毫无征兆——照样出包，只是签名仍是 ad-hoc，直到公证被拒才发现。
+# 本地默认 ad-hoc；想用正式证书打包，先 export APPLE_SIGNING_IDENTITY 再跑。
+: "${APPLE_SIGNING_IDENTITY:=-}"
+export APPLE_SIGNING_IDENTITY
+
+if [ "$APPLE_SIGNING_IDENTITY" = "-" ]; then
+  echo "签名方式：ad-hoc（对方首次打开需右键）"
+else
+  echo "签名方式：$APPLE_SIGNING_IDENTITY"
+fi
+
 echo "正在打包 macOS $LABEL …"
 
 # CI=true 是必须的，不是摆设：
@@ -42,20 +55,58 @@ DMG=$(find "$BUNDLE_DIR/dmg" -name "*.dmg" 2>/dev/null | head -1)
 if [ -d "$APP" ]; then
   xattr -dr com.apple.quarantine "$APP" 2>/dev/null || true
 
-  # 确认 ad-hoc 签名生效。没有签名的话，别人下载后会看到
-  #「已损坏，应该移到废纸篓」——比"无法验证开发者"吓人得多，
+  # 确认签名确实生效。完全没签名的话，别人下载后会看到
+  #「已损坏，应该移到废纸篓」——比「无法验证开发者」吓人得多，
   # 而且没有右键打开这条出路。
-  if codesign -dv "$APP" 2>&1 | grep -q "Signature=adhoc"; then
-    echo "✓ ad-hoc 签名正常"
+  SIGN_INFO=$(codesign -dv "$APP" 2>&1 || true)
+
+  if [ "$APPLE_SIGNING_IDENTITY" = "-" ]; then
+    if echo "$SIGN_INFO" | grep -q "Signature=adhoc"; then
+      echo "✓ ad-hoc 签名正常"
+    else
+      echo "! 未检测到 ad-hoc 签名，补签一次"
+      codesign --force --deep --sign - "$APP"
+    fi
   else
-    echo "! 未检测到 ad-hoc 签名，补签一次"
-    codesign --force --deep --sign - "$APP"
+    # 用正式证书时绝不能补签 ad-hoc——那会把证书签名直接抹掉。
+    # 这里只做校验，有问题就报出来让人看见，而不是"修"成更差的状态。
+    if echo "$SIGN_INFO" | grep -q "Signature=adhoc"; then
+      echo "! 期望用 $APPLE_SIGNING_IDENTITY 签名，实际却是 ad-hoc"
+      echo "  多半是证书没装进钥匙串，或身份串与 security find-identity 的输出不一致"
+      exit 1
+    fi
+    echo "✓ 已用证书签名"
+    # 公证过的包会带票据，对方离线也能校验通过
+    if xcrun stapler validate "$APP" >/dev/null 2>&1; then
+      echo "✓ 公证票据已附加（对方双击即可打开）"
+    else
+      echo "· 未附加公证票据：对方首次打开仍会被 Gatekeeper 拦下"
+      echo "  需设置 APPLE_API_KEY / APPLE_API_ISSUER / APPLE_API_KEY_PATH 后重新打包"
+    fi
   fi
 fi
 
 # 和 dmg 放在一起的说明，转发时可以一并发过去
 if [ -n "$DMG" ]; then
   xattr -dr com.apple.quarantine "$DMG" 2>/dev/null || true
+fi
+
+# 已公证的包不需要教人右键打开，说明文件也就不该再那么写
+if [ -n "$DMG" ] && xcrun stapler validate "$APP" >/dev/null 2>&1; then
+  cat > "$(dirname "$DMG")/首次打开说明.txt" <<'TXT'
+拾光笺 · 安装
+
+双击 .dmg，把「拾光笺」拖进「应用程序」文件夹，然后直接打开即可。
+
+首次打开时系统会问一句「这是从互联网下载的应用，确定要打开吗？」，
+点「打开」就行——所有联网下载的应用都会问这一次，之后不再提示。
+
+如果提示「已损坏，无法打开」：
+   多半是这个应用被聊天软件转发时压坏了。
+   请让对方直接发 .dmg 文件本身，不要发「拾光笺.app」——
+   .app 其实是个文件夹，经过压缩转发会丢掉内部的符号链接和执行权限。
+TXT
+elif [ -n "$DMG" ]; then
   cat > "$(dirname "$DMG")/首次打开说明.txt" <<'TXT'
 拾光笺 · 安装与首次打开
 
